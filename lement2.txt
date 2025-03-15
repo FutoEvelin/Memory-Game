@@ -1,0 +1,550 @@
+import java.util.ArrayList;
+import java.util.Random;
+
+class Cards {
+    ArrayList<Card> cards = new ArrayList<>();
+    private Random random = new Random();
+
+    public Cards() {
+        setElements(cards);
+        mix(cards);
+    }
+
+    public void setElements(ArrayList<Card> cards) {
+        for (int i = 0; i < 2; i++) {
+            cards.add(new Card("Back to the Future", "img/backToTheFutureImage.png", "img/back.png"));
+            cards.add(new Card("Titanic", "img/titanicImage.png", "img/back.png"));
+            cards.add(new Card("Harry Potter", "img/harryPotterImage.png", "img/back.png"));
+            cards.add(new Card("The Godfather", "img/theGodFatherImage.png", "img/back.png"));
+            cards.add(new Card("Forrest Gump", "img/forrestGumpImage.png", "img/back.png"));
+            cards.add(new Card("Rocky", "img/rockyImage.png", "img/back.png"));
+            cards.add(new Card("Pirates of the Caribbean", "img/piratesOfTheCaribbeanImage.png", "img/back.png"));
+            cards.add(new Card("Oppenheimer", "img/oppenheimerImage.png", "img/back.png"));
+            cards.add(new Card("Barbie", "img/barbieImage.png", "img/back.png"));
+        }
+    }
+
+    public void mix(ArrayList<Card> cards) {
+        for (int i = 0; i < cards.size(); i++) {
+            int j = random.nextInt(cards.size());
+            Card temp = cards.get(i);
+            cards.set(i, cards.get(j));
+            cards.set(j, temp);
+        }
+    }
+
+    public void reshuffle() {
+        mix(cards);
+    }
+
+    public ArrayList<Card> getCards() {
+        return cards;
+    }
+}
+----------------
+cardpanel
+
+import javax.sound.sampled.*;
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.stream.Stream;
+
+public class CardPanel extends JPanel {
+    private Card firstCard=null;
+    private Card secondCard=null;
+    private JButton firstButton=null;
+    private JButton secondButton=null;
+    CardFrame frame;
+
+    int points;
+    public CardPanel(Cards cardsInstance, int frameWidth, int frameHeight,CardFrame frame) {
+        this.frame=frame;
+        setLayout(new GridLayout(3, 6));
+        setBounds((frameWidth - 1000) / 2, (frameHeight - 680) / 2, 610, 450);
+        playSound("D:/2.ev/java/memoriajatek/res/sound/game.wav");
+
+        points=0;
+        ArrayList<Card> cards = cardsInstance.getCards();
+
+        cards.stream().forEach(card->card.setChosen(false));
+
+        for (Card card : cards) {
+            JButton button = new JButton(card.getBackImage());
+            button.setPreferredSize(new Dimension(card.getWidth(), card.getHeigth()));
+            button.setBorder(BorderFactory.createLineBorder(new Color(184, 215, 213), 3));
+            button.addActionListener(e -> {
+                if (card.getChosen()) {
+                    JPanel panel = new JPanel();
+                    panel.setBackground(new Color(216, 167, 209));
+                    JLabel label = new JLabel("Ez mar ki lett valasztva");
+                    label.setForeground(new Color(211,107,125));
+                    panel.add(label);
+
+                    JOptionPane.showMessageDialog(this, panel, "Figyelmeztetés", JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                playSound("D:/2.ev/java/memoriajatek/res/sound/bubblepop.wav");
+                button.setIcon(card.getCardImage());
+
+                if(firstCard==null)
+                {
+                    firstCard=card;
+                    firstButton=button;
+                }else if(secondCard==null)
+                {
+                    secondCard = card;
+                    secondButton = button;
+
+                    if (Stream.of(firstCard.getName(), secondCard.getName()).distinct().count() == 1) {
+                        firstButton.setIcon(firstCard.cardImage);
+                        secondButton.setIcon(secondCard.cardImage);
+                        firstCard.setChosen(true);
+                        secondCard.setChosen(true);
+                        firstCard = null;
+                        secondCard = null;
+
+                        points++;
+                        frame.incrementPoints();
+                        playSound("D:/2.ev/java/memoriajatek/res/sound/swoosh.wav");
+                        if (points == 9) {
+                            ImageIcon gif=new ImageIcon("res/confetti.gif");
+                            JLabel gifLabel = new JLabel(gif);
+
+                            gifLabel.setSize(1920, 1080);
+                            frame.getContentPane().add(gifLabel, 0);
+                            frame.revalidate();
+                            frame.repaint();
+
+                            playSound("D:/2.ev/java/memoriajatek/res/sound/yay.wav");
+                            new Timer(3000, ex -> {
+                                frame.getContentPane().remove(gifLabel);
+                                frame.revalidate();
+                                frame.repaint();
+                            }).start();
+                        }
+
+
+                    }else{
+                        //frame.decrementPoints();
+                        new Timer(1000, ae -> {
+                            if (firstCard != null && secondCard != null) {
+                                firstButton.setIcon(firstCard.getBackImage());
+                                secondButton.setIcon(secondCard.getBackImage());
+                                firstCard.setChosen(false);
+                                secondCard.setChosen(false);
+                                firstCard = null;
+                                secondCard = null;
+                                firstButton = null;
+                                secondButton = null;
+                            }
+                        }).start();
+                    }
+                }
+
+
+            });
+
+            add(button);
+        }
+
+    }
+
+    private void playSound(String filePath) {
+        try {
+            File audioFile = new File(filePath);
+            if (!audioFile.exists()) {
+                System.out.println("A fájl nem található: " + filePath);
+                return;
+            }
+
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioInputStream);
+            clip.start();
+        } catch (UnsupportedAudioFileException | LineUnavailableException | IOException ex) {
+            System.out.println("Hiba a hang lejátszása közben: " + ex.getMessage());
+        }
+    }
+
+
+}
+
+---------------------------
+card
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+
+public class Card {
+        String name;
+        ImageIcon cardImage;
+        ImageIcon backImage;
+        int width;
+        int height;
+        boolean chosen;
+        public Card(String name, String imagePath, String backImagePath) {
+            width=setWidth();
+            height=setHeight();
+            this.name = name;
+            try {
+                Image img = ImageIO.read(new File(imagePath));
+                Image scaledImg = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                this.cardImage = new ImageIcon(scaledImg);
+
+                img = ImageIO.read(new File(backImagePath));
+                scaledImg = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                this.backImage = new ImageIcon(scaledImg);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                this.cardImage = new ImageIcon();
+            }
+        }
+
+        public int setWidth()
+        {
+            return this.width=105;
+        }
+
+        public int setHeight()
+        {
+            return this.height=144;
+        }
+
+        public void setChosen(boolean x)
+        {
+            this.chosen=x;
+        }
+
+        public boolean getChosen()
+        {
+            return this.chosen;
+        }
+        public String getName()
+        {
+            return name;
+        }
+
+        public int getWidth()
+        {
+            return width;
+        }
+
+        public int getHeigth()
+        {
+            return height;
+        }
+
+        public ImageIcon getCardImage() {
+            return cardImage;
+        }
+
+        public ImageIcon getBackImage()
+        {
+            return backImage;
+
+        }
+}
+--------------------------
+cardframe
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
+
+public class CardFrame extends JFrame {
+    private JPanel backgroundPanel;
+    private JButton pointsButton;
+    private JButton reshuffleButton;
+    private JButton exitButton;
+    private JLabel timerLabel;
+    private Cards cardsInstance;
+    private int points;
+    private int elapsedTime;
+    private Timer timer;
+    private CardPanel cardPanel;
+
+    public CardFrame(String backgroundImagePath) {
+        setTitle("Card Game");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(1920, 1080);
+
+        backgroundPanel = new JPanel() {
+            private Image backgroundImage;
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                try {
+                    backgroundImage = ImageIO.read(new File(backgroundImagePath));
+                    g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        setFrame();
+        startTimer();
+    }
+
+    private void setFrame()
+    {
+        setSize(1920, 1080);
+        backgroundPanel.setLayout(null);
+        add(backgroundPanel);
+        initializeCardPanel();
+        setButtons();
+        addTimerLabel(50, 30, 200, 50);
+
+        JLabel label = new JLabel();
+        label.setText("Memory game");
+        label.setFont(new Font("Broadway", Font.PLAIN, 35));
+        label.setForeground(new Color(184, 215, 213));
+        label.setBounds(633,130,350,40);
+        backgroundPanel.add(label);
+        setVisible(true);
+    }
+    private void initializeCardPanel() {
+        cardsInstance = new Cards();
+        cardPanel = new CardPanel(cardsInstance, getWidth(), getHeight(),this);
+        cardPanel.setBounds(460, 220, 610, 450);
+        backgroundPanel.add(cardPanel);
+    }
+
+    private JButton createButton(String text, int x, int y, int width, int height, ActionListener actionListener) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Broadway", Font.BOLD, 18));
+        button.setBackground(new Color(184, 215, 213));
+        button.setForeground(new Color(254, 150, 133));
+        button.setBounds(x, y, width, height);
+        button.setBorder(BorderFactory.createLineBorder(new Color(254, 140, 133), 3));
+        button.addActionListener(actionListener);
+        backgroundPanel.add(button);
+        backgroundPanel.repaint();
+        return button;
+    }
+
+    public void setButtons() {
+        points = 0;
+        pointsButton = createButton("Pontok: 0 / 9", 1200, 400, 150, 80, e -> {
+
+        });
+
+        reshuffleButton = createButton("Reshuffle", 1200, 550, 150, 80, e -> {
+            cardsInstance.reshuffle();
+            refreshCardPanel();
+        });
+
+        exitButton = createButton("Exit", 1200, 250, 150, 80, e -> {
+            System.exit(0);
+        });
+    }
+
+
+    public void refreshCardPanel() {
+        backgroundPanel.remove(cardPanel);
+        setFrame();
+        backgroundPanel.repaint();
+    }
+
+    public JButton getPointsButton() {
+        return pointsButton;
+    }
+
+    private void addTimerLabel(int x, int y, int width, int height) {
+        timerLabel = new JLabel("Time: 0");
+        timerLabel.setFont(new Font("Broadway", Font.PLAIN, 24));
+        timerLabel.setForeground(new Color(254, 150, 133));
+        timerLabel.setBounds(x, y, width, height);
+        backgroundPanel.add(timerLabel);
+    }
+
+    private void startTimer() {
+        elapsedTime = 0;
+        timer = new Timer(1000, e -> {
+            elapsedTime++;
+            timerLabel.setText("Time: " + elapsedTime + "s");
+        });
+        timer.start();
+    }
+
+
+    public void incrementPoints() {
+        points++;
+        SwingUtilities.invokeLater(() -> {
+            pointsButton.setText("Pontok: " + points + "/9");
+            pointsButton.repaint();
+        });
+    }
+
+    public static void main(String[] args) {
+        new CardFrame("img/background.png");
+    }
+}
+----------------------------
+menuframe
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
+
+public class MenuFrame {
+    JButton startGameButton;
+    JButton exitButton;
+    JButton instructionButton;
+
+    private Image loadBackgroundImage(String path) {
+        try {
+            Image img = ImageIO.read(new File(path));
+            return img.getScaledInstance(1920, 1080, Image.SCALE_SMOOTH);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public MenuFrame() {
+        JFrame menuFrame = new JFrame("Memory Game");
+        menuFrame.setSize(1920, 1080);
+        menuFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        menuFrame.setLocationRelativeTo(null);
+
+        final Image scaledImg = loadBackgroundImage("img/background.png");
+
+        JPanel backgroundPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (scaledImg != null) {
+                    g.drawImage(scaledImg, 0, 0, this);
+                }
+            }
+        };
+
+
+        backgroundPanel.setLayout(null);
+        menuFrame.setContentPane(backgroundPanel);
+
+        setMenuFrame(backgroundPanel,menuFrame);
+    }
+
+    void setMenuFrame(JPanel backgroundPanel, JFrame menuFrame) {
+        startGameButton = createButton(
+                "Start Game", 660, 300, 200, 80,
+                new Color(253, 253, 150), new Color(184, 215, 213), new Color(119, 158, 203),
+                e -> {
+                    menuFrame.setVisible(false);
+                    new CardFrame("img/background.png");
+                }
+        );
+
+        exitButton = createButton(
+                "Exit", 660, 400, 200, 80,
+                new Color(203, 153, 201), new Color(184, 215, 213), new Color(119, 158, 203),
+                e -> System.exit(0)
+        );
+
+        instructionButton = createButton(
+                "Instructions", 660, 500, 200, 80,
+                new Color(119, 221, 119), new Color(184, 215, 213), new Color(119, 158, 203),
+                e -> new InstructionsFrame("files/instructions.txt")
+        );
+
+        backgroundPanel.add(startGameButton);
+        backgroundPanel.add(exitButton);
+        backgroundPanel.add(instructionButton);
+
+        menuFrame.setVisible(true);
+    }
+
+    private JButton createButton(String text, int x, int y, int width, int height, Color backgroundColor, Color foregroundColor, Color borderColor, ActionListener actionListener) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Broadway", Font.BOLD, 20));
+        button.setBackground(backgroundColor);
+        button.setForeground(foregroundColor);
+        button.setBounds(x, y, width, height);
+        button.setBorder(BorderFactory.createLineBorder(borderColor, 7));
+        button.addActionListener(actionListener);
+        return button;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(MenuFrame::new);
+    }
+}
+----------------
+instructionsframe
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.*;
+
+public class InstructionsFrame {
+    JFrame frame;
+
+    public InstructionsFrame(String fileName) {
+        String content = displayFileContent(fileName);
+        if (content == null) {
+            JOptionPane.showMessageDialog(null, "Error loading instructions.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        frame = new JFrame("Instructions");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(400, 300);
+
+        JTextArea textArea = new JTextArea(content);
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+        frame.setVisible(true);
+    }
+
+    private String displayFileContent(String fileName) {
+        String content = "";
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(fileName));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content += line + "\n";
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error reading file: " + fileName, "Error", JOptionPane.ERROR_MESSAGE);
+            return null;
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return content;
+    }
+
+    public static void main(String[] args) {
+        new InstructionsFrame("files/instructions.txt"); // Cseréld ki a saját fájlneveddel
+    }
+}
+
+

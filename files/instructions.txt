@@ -1,0 +1,11 @@
+1.A menü ablakból válaszd ki a "Start game" opciót annak érdekében, hogy elkezd a játékot.
+
+2.Válaszd ki, hogy mennyi időt szánsz a játékra: 1,3 vagy 5 perc
+
+3.A játék során rendre 2-2 kártyát kell választanod, s addig kell tippelned amíg párt találsz, tehát 2 kártya megegyezik.
+
+3.Ha sikerült eltalálnod egy párt, nő a pontszámod.
+
+4.Ha újra szeretnéd rendezni a kártyákat, a "reshuffle" opciót válaszd.
+
+5.Ha nem szeretnél tovább játszani, az "exit" opciót választhatod.
